@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Controlled form</title>
+  </head>
+  <body>
+    <form id="rf">
+      <label for="rf-first">First name</label>
+      <input id="rf-first" name="firstName" />
+      <label for="rf-email">Email</label>
+      <input id="rf-email" name="email" type="email" />
+      <button type="submit">Next</button>
+    </form>
+    <script>
+      // Mimics React controlled inputs: state only changes on input events, and blur re-renders from state.
+      const proto = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+      window.__state = {};
+      for (const input of document.querySelectorAll('#rf input')) {
+        window.__state[input.name] = '';
+        input.addEventListener('input', () => (window.__state[input.name] = proto.get.call(input)));
+        input.addEventListener('blur', () => proto.set.call(input, window.__state[input.name]));
+      }
+      document.getElementById('rf').addEventListener('submit', (e) => {
+        e.preventDefault();
+        window.__submitted = true;
+      });
+    </script>
+  </body>
+</html>

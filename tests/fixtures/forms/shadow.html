@@ -1,0 +1,29 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Shadow DOM form</title>
+  </head>
+  <body>
+    <form id="sf">
+      <apply-fields></apply-fields>
+      <button type="submit">Send</button>
+    </form>
+    <script>
+      customElements.define(
+        'apply-fields',
+        class extends HTMLElement {
+          connectedCallback() {
+            const root = this.attachShadow({ mode: 'open' });
+            root.innerHTML = `
+              <label for="s-name">Full name</label><input id="s-name" name="fullName" />
+              <label for="s-city">City</label><input id="s-city" name="city" />`;
+          }
+        },
+      );
+      document.getElementById('sf').addEventListener('submit', (e) => {
+        e.preventDefault();
+        window.__submitted = true;
+      });
+    </script>
+  </body>
+</html>
