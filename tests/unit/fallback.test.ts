@@ -19,14 +19,41 @@ describe('FallbackChain', () => {
     await expect(new FallbackChain([a, b]).complete(req)).resolves.toEqual({ value: 'hello', provider: 'B' });
   });
 
-  it('reports every provider error when all fail', async () => {
+  it('explains every provider failure in plain words', async () => {
     const a = provider('A', async () => {
       throw new LlmError('A: HTTP 429', 'A', 429);
     });
     const b = provider('B', async () => {
-      throw new Error('network down');
+      throw new Error('bad request');
     });
-    await expect(new FallbackChain([a, b]).complete(req)).rejects.toThrow(/A: HTTP 429[\s\S]*B: network down/);
+    await expect(new FallbackChain([a, b]).complete(req)).rejects.toThrow(
+      /A reached its free-tier limit\.[\s\S]*B: bad request[\s\S]*backup provider in Settings/,
+    );
+  });
+
+  it('retries a busy provider (503) before moving on', async () => {
+    let calls = 0;
+    const a = provider('A', async () => {
+      if (++calls < 3) throw new LlmError('A: HTTP 503', 'A', 503);
+      return 'finally';
+    });
+    const chain = new FallbackChain([a], { retryDelaysMs: [0, 0] });
+    await expect(chain.complete(req)).resolves.toEqual({ value: 'finally', provider: 'A' });
+    expect(calls).toBe(3);
+  });
+
+  it('falls back after retries are used up and says how often it tried', async () => {
+    const a = provider('A', async () => {
+      throw new LlmError('A: HTTP 503', 'A', 503);
+    });
+    const b = provider('B', async () => {
+      throw new TypeError('Failed to fetch');
+    });
+    const chain = new FallbackChain([a, b], { retryDelaysMs: [0] });
+    await expect(chain.complete(req)).rejects.toThrow(
+      /A is busy or unavailable right now \(tried 2 times\)\.[\s\S]*B could not be reached/,
+    );
+    expect(a.complete).toHaveBeenCalledTimes(2);
   });
 
   it('stops immediately when aborted', async () => {

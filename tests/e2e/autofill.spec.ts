@@ -29,7 +29,7 @@ function answers(promptText: string) {
 }
 
 async function setApplicationAnswers(panel: Page) {
-  await panel.getByLabel('Requires visa sponsorship? (Yes/No)').fill('No');
+  await panel.getByLabel('Requires visa sponsorship?').selectOption('No');
   await panel.getByLabel(/Work authorization/).fill('EU citizen');
   await panel.getByRole('button', { name: 'Save profile' }).click();
   await expect(panel.getByText('Profile saved.')).toBeVisible();

@@ -7,8 +7,10 @@ describe('ProfileDataSchema', () => {
   it('fills missing and null fields with defaults', () => {
     const p = ProfileDataSchema.parse({ contact: { name: 'Ann', email: null }, experience: [{ company: 'Acme' }] });
     expect(p.contact).toEqual({ name: 'Ann', email: '', phone: '', location: '', links: [] });
-    expect(p.experience[0]).toEqual({ company: 'Acme', title: '', location: '', start: '', end: '', bullets: [] });
+    expect(p.experience[0]).toEqual({ company: 'Acme', title: '', location: '', start: '', end: '', bullets: [], tech: [] });
     expect(p.skills).toEqual([]);
+    expect(p.skillGroups).toEqual([]);
+    expect(p.languages).toEqual([]);
   });
 });
 

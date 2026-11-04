@@ -4,6 +4,7 @@ import { jobUrlKey, pickBest, textHash } from '../extract/merge';
 import type { FrameResult } from '../extract/types';
 import { buildChain, loadSettings } from '../settings';
 import { analyzeJob } from './analyze';
+import { pageOverlay } from './scanOverlay';
 
 const ALL_SITES = { origins: ['<all_urls>'] };
 
@@ -46,6 +47,18 @@ export interface AnalyzeOutcome {
 }
 
 export async function analyzeTab(tabId: number, opts: { force?: boolean; signal?: AbortSignal } = {}): Promise<AnalyzeOutcome> {
+  await pageOverlay.show(tabId, 'Reading the job description…');
+  try {
+    const outcome = await analyze(tabId, opts);
+    await pageOverlay.finish(tabId, true, outcome.cached ? 'Job loaded' : 'Job analyzed');
+    return outcome;
+  } catch (e) {
+    await pageOverlay.finish(tabId, false, opts.signal?.aborted ? 'Cancelled' : 'Could not analyze this page');
+    throw e;
+  }
+}
+
+async function analyze(tabId: number, opts: { force?: boolean; signal?: AbortSignal }): Promise<AnalyzeOutcome> {
   const page = pickBest(await captureTab(tabId));
   if (!page) {
     throw new Error('Could not find a job description on this page. Highlight the job description text and click Analyze again.');
@@ -58,6 +71,7 @@ export async function analyzeTab(tabId: number, opts: { force?: boolean; signal?
     if (existing?.textHash === hash) return { record: existing, cached: true };
   }
 
+  await pageOverlay.show(tabId, 'Matching requirements with AI…');
   const { value, provider } = await analyzeJob(buildChain(await loadSettings()), page, opts.signal);
   const record: JobRecord = {
     id,

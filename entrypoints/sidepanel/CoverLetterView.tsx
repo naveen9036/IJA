@@ -1,9 +1,11 @@
+import { Copy, Download, Mail, Save, Sparkles, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import {
   db,
   documentId,
   getDocument,
   getProfile,
+  getResumeDocument,
   saveDocument,
   type DocumentRecord,
   type JobRecord,
@@ -28,9 +30,34 @@ import type { ProfileData } from '@/lib/profile/schema';
 import { scoreMatch } from '@/lib/score/score';
 import { buildChain, loadSettings } from '@/lib/settings';
 import { Field, TextArea, TextInput } from './components/fields';
+import { Notice, Select, Spinner, TabIntro } from './components/ui';
 import { WarningsBox } from './components/WarningsBox';
 
 type LetterRecord = DocumentRecord<LetterContent>;
+
+const intro = (
+  <TabIntro
+    id="letter"
+    icon={Mail}
+    title="Cover letter"
+    summary="Write a cover letter for the analyzed job from your own experience."
+    steps={[
+      'Analyze a job in the Job tab first. If you also made a tailored resume, the letter is based on it.',
+      'Pick a tone (Professional, Warm or Concise) and a length.',
+      'Optionally add notes the letter should mention – a referral, why this company, a relocation plan.',
+      <>
+        Click <b>Generate cover letter</b> and read the review box: it flags placeholders like [Company], numbers that
+        aren't in your profile, and a missing company name.
+      </>,
+      'Edit the greeting, paragraphs and sign-off, save, then copy the text or download DOCX or PDF.',
+    ]}
+    tips={[
+      'Facts in your notes count as yours, so the AI may use them.',
+      'Your name from Profile is always used as the signature.',
+      'Tone, length and notes are remembered for this job.',
+    ]}
+  />
+);
 
 export default function CoverLetterView({
   jobId,
@@ -60,7 +87,7 @@ export default function CoverLetterView({
         jobId ? db.jobs.get(jobId) : undefined,
         getProfile(),
         jobId ? getDocument<LetterContent>(jobId, 'coverLetter') : undefined,
-        jobId ? getDocument<ProfileData>(jobId, 'resume') : undefined,
+        jobId ? getResumeDocument(jobId) : undefined,
       ]);
       setJob(j ?? null);
       setProfile(p ?? null);
@@ -73,26 +100,32 @@ export default function CoverLetterView({
     return () => abortRef.current?.abort();
   }, [jobId]);
 
-  if (!loaded) return <p className="text-sm text-gray-500">Loading…</p>;
+  if (!loaded) return intro;
 
   if (!job || !job.analysis.isJobPosting) {
     return (
-      <section className="card text-sm">
-        Analyze a job posting first.{' '}
-        <button className="text-blue-700 underline" onClick={onOpenJob}>
-          Go to Job
-        </button>
-      </section>
+      <>
+        {intro}
+        <Notice tone="info">
+          Analyze a job posting first.{' '}
+          <button className="font-medium underline" onClick={onOpenJob}>
+            Go to Job
+          </button>
+        </Notice>
+      </>
     );
   }
   if (!profile) {
     return (
-      <section className="card text-sm">
-        Add your resume first.{' '}
-        <button className="text-blue-700 underline" onClick={onOpenProfile}>
-          Go to Profile
-        </button>
-      </section>
+      <>
+        {intro}
+        <Notice tone="info">
+          Add your resume first.{' '}
+          <button className="font-medium underline" onClick={onOpenProfile}>
+            Go to Profile
+          </button>
+        </Notice>
+      </>
     );
   }
 
@@ -181,33 +214,34 @@ export default function CoverLetterView({
 
   return (
     <div className="space-y-3">
-      <section className="card space-y-2">
-        <h2 className="text-sm font-semibold">
-          Cover letter for {role}
+      {intro}
+      <section className="card space-y-3">
+        <h3 className="text-sm font-semibold text-slate-900">
+          For {role}
           {company && ` at ${company}`}
-        </h2>
+        </h3>
         <div className="grid grid-cols-2 gap-2">
           <Field label="Tone">
-            <select
-              className="input"
+            <Select
               value={options.tone}
               onChange={(e) => setOptions({ ...options, tone: e.target.value as LetterTone })}
-            >
-              <option value="professional">Professional</option>
-              <option value="warm">Warm</option>
-              <option value="concise">Concise</option>
-            </select>
+              options={[
+                { value: 'professional', label: 'Professional' },
+                { value: 'warm', label: 'Warm' },
+                { value: 'concise', label: 'Concise' },
+              ]}
+            />
           </Field>
           <Field label="Length">
-            <select
-              className="input"
+            <Select
               value={options.length}
               onChange={(e) => setOptions({ ...options, length: e.target.value as LetterLength })}
-            >
-              <option value="short">Short (~150 words)</option>
-              <option value="standard">Standard (~250 words)</option>
-              <option value="long">Long (~350 words)</option>
-            </select>
+              options={[
+                { value: 'short', label: 'Short (~150 words)' },
+                { value: 'standard', label: 'Standard (~250 words)' },
+                { value: 'long', label: 'Long (~350 words)' },
+              ]}
+            />
           </Field>
         </div>
         <TextArea
@@ -216,25 +250,25 @@ export default function CoverLetterView({
           value={options.notes}
           onChange={(notes) => setOptions({ ...options, notes })}
         />
-        <p className="text-xs text-gray-500">
-          Uses {tailored ? 'your tailored resume for this job' : 'your profile'}; only facts from it are allowed.
+        <p className="text-xs text-slate-500">
+          Based on {tailored ? 'your tailored resume for this job' : 'your profile'}; only facts from it are allowed.
         </p>
-        <button className="btn-primary w-full" disabled={!!busy} onClick={generate}>
-          {doc ? 'Regenerate' : 'Generate cover letter'}
-        </button>
-        {busy && (
-          <div className="flex items-center gap-2 text-sm text-blue-700">
-            <span>{busy}</span>
-            {abortRef.current && (
-              <button className="btn-secondary px-2 py-0.5" onClick={() => abortRef.current?.abort()}>
-                Cancel
-              </button>
-            )}
-          </div>
-        )}
-        {error && <p className="text-sm whitespace-pre-wrap text-red-700">{error}</p>}
-        {notice && <p className="text-sm text-green-700">{notice}</p>}
-        {doc && <p className="text-xs text-gray-500">Generated with {doc.provider}.</p>}
+        <div className="flex gap-2">
+          <button className="btn-primary flex-1" disabled={!!busy} onClick={generate}>
+            {busy ? <Spinner /> : <Sparkles className="h-4 w-4" aria-hidden />}
+            {doc ? 'Regenerate' : 'Generate cover letter'}
+          </button>
+          {busy && abortRef.current && (
+            <button className="btn-secondary" onClick={() => abortRef.current?.abort()}>
+              <X className="h-4 w-4" aria-hidden />
+              Cancel
+            </button>
+          )}
+        </div>
+        {busy && <p className="text-sm text-indigo-700">{busy}</p>}
+        {error && <Notice tone="error">{error}</Notice>}
+        {notice && <Notice tone="success">{notice}</Notice>}
+        {doc && <p className="text-xs text-slate-500">Generated with {doc.provider}.</p>}
       </section>
 
       {doc && <WarningsBox title="Check these before sending" removed={doc.removed} warnings={doc.warnings} />}
@@ -258,18 +292,22 @@ export default function CoverLetterView({
             </p>
           </section>
 
-          <div className="sticky bottom-0 space-y-2 border-t border-gray-200 bg-gray-50 py-2">
+          <div className="sticky bottom-0 -mx-3 space-y-2 border-t border-slate-200 bg-white/95 px-3 py-3 backdrop-blur">
             <button className="btn-secondary w-full" disabled={!dirty || !!busy} onClick={save}>
+              <Save className="h-4 w-4" aria-hidden />
               {dirty ? 'Save changes' : 'All changes saved'}
             </button>
             <div className="grid grid-cols-3 gap-2">
-              <button className="btn-secondary" disabled={!!busy} onClick={copy}>
+              <button className="btn-secondary px-2" disabled={!!busy} onClick={copy}>
+                <Copy className="h-4 w-4" aria-hidden />
                 Copy text
               </button>
-              <button className="btn-primary" disabled={!!busy} onClick={() => download('docx')}>
+              <button className="btn-primary px-2" disabled={!!busy} onClick={() => download('docx')}>
+                <Download className="h-4 w-4" aria-hidden />
                 Download DOCX
               </button>
-              <button className="btn-primary" disabled={!!busy} onClick={() => download('pdf')}>
+              <button className="btn-primary px-2" disabled={!!busy} onClick={() => download('pdf')}>
+                <Download className="h-4 w-4" aria-hidden />
                 Download PDF
               </button>
             </div>

@@ -2,7 +2,7 @@ import { unzipSync, strFromU8 } from 'fflate';
 import { describe, expect, it } from 'vitest';
 import type { JobRecord } from '@/lib/db';
 import { buildResumeDocx } from '@/lib/export/resumeDocx';
-import { fileName, formatMonth, formatRange, resumeSections } from '@/lib/export/layout';
+import { contactLines, fileName, formatMonth, formatRange, resumeSections, skillLines } from '@/lib/export/layout';
 import { ProfileDataSchema, type ProfileData } from '@/lib/profile/schema';
 import { buildTailorPrompt, MAX_TAILOR_JD_CHARS } from '@/lib/resume/tailor';
 import { verifyTailored } from '@/lib/resume/verify';
@@ -20,6 +20,7 @@ const original: ProfileData = ProfileDataSchema.parse({
       start: '2021-03',
       end: 'Present',
       bullets: ['Built a Kubernetes platform used by 40 teams', 'Cut CI time by 60%'],
+      tech: ['Kubernetes', 'Go'],
     },
     { company: 'Globex', title: 'DevOps Engineer', start: '2018-01', end: '2021-02', bullets: ['Wrote Terraform modules'] },
   ],
@@ -33,8 +34,8 @@ describe('verifyTailored', () => {
   it('removes invented roles and restores facts and missing roles', () => {
     const t = tailored({
       experience: [
-        { company: 'Acme', title: 'Staff Platform Engineer', location: '', start: '2019-01', end: 'Present', bullets: ['Led platform work'] },
-        { company: 'Initech', title: 'CTO', location: '', start: '2015', end: '2017', bullets: ['Ran everything'] },
+        { company: 'Acme', title: 'Staff Platform Engineer', location: '', start: '2019-01', end: 'Present', bullets: ['Led platform work'], tech: ['Rust'] },
+        { company: 'Initech', title: 'CTO', location: '', start: '2015', end: '2017', bullets: ['Ran everything'], tech: [] },
       ],
     });
     const { resume, removed } = verifyTailored(original, t);
@@ -43,6 +44,7 @@ describe('verifyTailored', () => {
       ['Globex', 'DevOps Engineer', '2018-01'],
     ]);
     expect(resume.experience[0]!.bullets).toEqual(['Led platform work']);
+    expect(resume.experience[0]!.tech).toEqual(['Kubernetes', 'Go']);
     expect(resume.experience[1]!.bullets).toEqual(['Wrote Terraform modules']);
     expect(removed).toEqual(['Role "CTO at Initech" is not in your profile']);
   });
@@ -68,6 +70,20 @@ describe('verifyTailored', () => {
     expect(resume.skills).toEqual(['Kubernetes', 'k8s', 'SQL']);
     expect(resume.projects).toEqual([]);
     expect(removed).toEqual(expect.arrayContaining(['Skill "Rust" is not in your profile', 'Project "Secret Startup" is not in your profile']));
+  });
+
+  it('filters skill categories like skills and keeps spoken languages from the profile', () => {
+    const t = tailored({
+      skillGroups: [
+        { name: 'Cloud', skills: ['Kubernetes', 'Rust'] },
+        { name: 'Made up', skills: ['Rust'] },
+      ],
+      languages: ['Klingon'],
+    });
+    const { resume, removed } = verifyTailored({ ...original, languages: ['English'] }, t);
+    expect(resume.skillGroups).toEqual([{ name: 'Cloud', skills: ['Kubernetes'] }]);
+    expect(resume.languages).toEqual(['English']);
+    expect(removed.filter((r) => r.includes('Rust'))).toHaveLength(1);
   });
 
   it('warns about new numbers and technologies in rewritten text', () => {
@@ -125,6 +141,24 @@ describe('layout', () => {
 
   it('skips empty sections', () => {
     expect(resumeSections({ ...original, certifications: [], projects: [] })).toEqual(['summary', 'skills', 'experience', 'education']);
+    expect(resumeSections({ ...original, languages: ['English'] })).toContain('languages');
+  });
+
+  it('keeps the resume own skill categories, or groups skills by type', () => {
+    expect(skillLines({ ...original, skillGroups: [{ name: 'Backend', skills: ['Go'] }] })).toEqual([{ label: 'Backend', items: ['Go'] }]);
+    expect(skillLines(original)).toEqual([
+      { label: 'Languages', items: ['Go'] },
+      { label: 'Data & Messaging', items: ['PostgreSQL'] },
+      { label: 'Cloud & DevOps', items: ['Kubernetes', 'Terraform'] },
+    ]);
+    expect(skillLines({ ...original, skills: ['Leadership', 'Mentoring'] })).toEqual([{ label: '', items: ['Leadership', 'Mentoring'] }]);
+  });
+
+  it('splits contact details into location/phone/email and links', () => {
+    expect(contactLines({ ...original.contact, links: ['https://www.linkedin.com/in/jane/', 'github.com/jane'] })).toEqual([
+      'Austin, TX | +1 555 0100 | jane@example.com',
+      'linkedin.com/in/jane | github.com/jane',
+    ]);
   });
 });
 
@@ -138,6 +172,9 @@ describe('renderers', () => {
     expect(order.every((i, n) => i > -1 && (n === 0 || i > order[n - 1]!))).toBe(true);
     expect(text).toContain('Cut CI time by 60%');
     expect(xml).toContain('w:numPr');
+    expect(xml).toMatch(/<w:tab w:val="right"/);
+    expect(text).toContain('Technologies:');
+    expect(text).toContain('Cloud &amp; DevOps:');
   });
 
   it('PDF contains the name and experience', async () => {
@@ -152,7 +189,9 @@ describe('renderers', () => {
     const text = content.items.map((i) => ('str' in i ? i.str : '')).join(' ');
     await task.destroy();
     expect(text).toContain('Jane Doe');
-    expect(text).toContain('EXPERIENCE');
+    expect(text).toContain('PROFESSIONAL EXPERIENCE');
     expect(text).toContain('Built a Kubernetes platform used by 40 teams');
+    expect(text).toContain('Technologies:');
+    expect(text).not.toMatch(/\w-\s*$/m);
   });
 });

@@ -36,13 +36,28 @@ export default function ProfileEditor({
           value={value.certifications}
           onChange={(certifications) => set({ certifications })}
         />
+        <CsvInput label="Languages you speak" value={value.languages} onChange={(languages) => set({ languages })} />
       </section>
+
+      <ListSection
+        title="Skill categories"
+        items={value.skillGroups}
+        onChange={(skillGroups) => set({ skillGroups })}
+        create={() => ({ name: '', skills: [] })}
+        itemTitle={(g) => g.name}
+        render={(g, u) => (
+          <>
+            <TextInput label="Category" placeholder="e.g. Backend" value={g.name} onChange={(name) => u({ name })} />
+            <CsvInput label="Skills in this category" value={g.skills} onChange={(skills) => u({ skills })} />
+          </>
+        )}
+      />
 
       <ListSection
         title="Experience"
         items={value.experience}
         onChange={(experience) => set({ experience })}
-        create={() => ({ company: '', title: '', location: '', start: '', end: '', bullets: [] })}
+        create={() => ({ company: '', title: '', location: '', start: '', end: '', bullets: [], tech: [] })}
         itemTitle={(x) => [x.title, x.company].filter(Boolean).join(' @ ')}
         render={(x, u, i) => (
           <>
@@ -54,6 +69,7 @@ export default function ProfileEditor({
               <TextInput label="End" placeholder="YYYY-MM or Present" value={x.end} onChange={(end) => u({ end })} />
             </div>
             <LinesInput label="Achievements" rows={5} value={x.bullets} onChange={(bullets) => u({ bullets })} />
+            <CsvInput label="Technologies" value={x.tech} onChange={(tech) => u({ tech })} />
             {roleExtra?.(i)}
           </>
         )}

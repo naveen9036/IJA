@@ -1,9 +1,9 @@
 import { browser } from 'wxt/browser';
-import { db, getDocument, getProfile } from '../db';
+import { db, getDocument, getProfile, getResumeDocument } from '../db';
 import { fileName } from '../export/layout';
 import { letterText, type LetterContent } from '../letter/schema';
-import type { ProfileData } from '../profile/schema';
 import { buildChain, loadSettings } from '../settings';
+import { pageOverlay } from '../job/scanOverlay';
 import { answerQuestions } from './answer';
 import { mapField, withValue, type AutofillContext, type MappedField } from './map';
 import { qaKey } from './qa';
@@ -84,13 +84,28 @@ export async function autofillTab(
   tabId: number,
   opts: { jobId: string | null; overwrite: boolean; signal?: AbortSignal },
 ): Promise<AutofillSummary> {
+  await pageOverlay.show(tabId, 'Filling the form…');
+  try {
+    const summary = await autofill(tabId, opts);
+    await pageOverlay.finish(tabId, true, `${summary.filled.length} fields filled – review before submitting`);
+    return summary;
+  } catch (e) {
+    await pageOverlay.finish(tabId, false, 'Could not fill this form');
+    throw e;
+  }
+}
+
+async function autofill(
+  tabId: number,
+  opts: { jobId: string | null; overwrite: boolean; signal?: AbortSignal },
+): Promise<AutofillSummary> {
   const frames = await detectTab(tabId);
   const profile = await getProfile();
   if (!profile) throw new Error('Add your resume in the Profile tab first.');
 
   const [job, resumeDoc, letterDoc, qa] = await Promise.all([
     opts.jobId ? db.jobs.get(opts.jobId) : undefined,
-    opts.jobId ? getDocument<ProfileData>(opts.jobId, 'resume') : undefined,
+    opts.jobId ? getResumeDocument(opts.jobId) : undefined,
     opts.jobId ? getDocument<LetterContent>(opts.jobId, 'coverLetter') : undefined,
     db.qa.toArray(),
   ]);

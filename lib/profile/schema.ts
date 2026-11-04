@@ -10,6 +10,13 @@ export const ExperienceSchema = z.object({
   start: str(),
   end: str(),
   bullets: strList(),
+  /** The role's "Technologies:" line, if the resume has one. */
+  tech: strList(),
+});
+
+export const SkillGroupSchema = z.object({
+  name: str(),
+  skills: strList(),
 });
 
 export const EducationSchema = z.object({
@@ -45,10 +52,14 @@ export const ProfileDataSchema = z.object({
   education: z.array(EducationSchema).nullish().transform((v) => v ?? []),
   projects: z.array(ProjectSchema).nullish().transform((v) => v ?? []),
   skills: strList(),
+  /** The resume's own skill categories (e.g. "Backend", "Cloud"); `skills` still lists every skill. */
+  skillGroups: z.array(SkillGroupSchema).nullish().transform((v) => v ?? []),
   certifications: strList(),
+  languages: strList(),
 });
 
 export type Experience = z.output<typeof ExperienceSchema>;
+export type SkillGroup = z.output<typeof SkillGroupSchema>;
 export type Education = z.output<typeof EducationSchema>;
 export type Project = z.output<typeof ProjectSchema>;
 export type ProfileData = z.output<typeof ProfileDataSchema>;
@@ -87,18 +98,27 @@ export function cleanProfileData(d: ProfileData): ProfileData {
     education: d.education.map(trimAll),
     projects: d.projects.map(trimAll),
     skills: cleanList(d.skills),
+    skillGroups: d.skillGroups
+      .map((g) => ({ name: g.name.trim(), skills: cleanList(g.skills) }))
+      .filter((g) => g.skills.length > 0),
     certifications: cleanList(d.certifications),
+    languages: cleanList(d.languages),
   };
 }
+
+/** Fills fields added in later versions so older saved profiles and documents keep working. */
+export const normalizeProfileData = (d: unknown): ProfileData => ProfileDataSchema.parse(d ?? {});
 
 /** Shape description embedded in the LLM prompt. */
 export const PROFILE_JSON_SHAPE = `{
   "contact": { "name": "", "email": "", "phone": "", "location": "", "links": [""] },
   "headline": "",
   "summary": "",
-  "experience": [{ "company": "", "title": "", "location": "", "start": "YYYY-MM", "end": "YYYY-MM or Present", "bullets": [""] }],
+  "experience": [{ "company": "", "title": "", "location": "", "start": "YYYY-MM", "end": "YYYY-MM or Present", "bullets": [""], "tech": [""] }],
   "education": [{ "institution": "", "degree": "", "field": "", "start": "", "end": "", "grade": "" }],
   "projects": [{ "name": "", "description": "", "tech": [""], "bullets": [""] }],
   "skills": [""],
-  "certifications": [""]
+  "skillGroups": [{ "name": "", "skills": [""] }],
+  "certifications": [""],
+  "languages": [""]
 }`;

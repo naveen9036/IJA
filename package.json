@@ -1,6 +1,6 @@
 {
   "name": "ija",
-  "description": "Job application assistant: match score, tailored resume, cover letter, and form autofill.",
+  "description": "IJA – Intelligent Job Assistant: match score, tailored resume, cover letter, and form autofill.",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -19,6 +19,7 @@
     "dexie": "^4.4.6",
     "docx": "^9.11.0",
     "fflate": "^0.8.3",
+    "lucide-react": "^1.57.0",
     "mammoth": "^1.13.0",
     "pdfjs-dist": "^6.4.299",
     "react": "^19.3.0",

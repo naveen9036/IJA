@@ -1,6 +1,8 @@
-# IJA: Job Application Assistant (Chrome MV3 extension)
+# IJA – Intelligent Job Assistant (Chrome MV3 extension)
 
-Side panel extension that reads a job page, scores it against the user's resume, writes a tailored resume and cover letter, and autofills application forms. The product plan is in `IMPLEMENTATION_PLAN.md`. Step-by-step plans for each phase are in `docs/plans/`.
+IJA (Intelligent Job Assistant) is a side panel extension that reads a job page, scores it against the user's resume, writes a tailored resume and cover letter, and autofills application forms. The product plan is in `IMPLEMENTATION_PLAN.md`. Step-by-step plans for each phase are in `docs/plans/`.
+
+Use "IJA – Intelligent Job Assistant" for the product name everywhere, including UI text and the manifest. Never use "Job Application Assistant".
 
 ## Commands
 
@@ -20,10 +22,10 @@ CHROMIUM_PATH="$HOME/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64
 ## Layout
 
 - `entrypoints/background.ts`: only opens the side panel on toolbar click.
-- `entrypoints/sidepanel/`: React UI (`App.tsx` tabs, `*View.tsx`, `components/`).
+- `entrypoints/sidepanel/`: React UI (`App.tsx` icon tab bar with tooltips, `*View.tsx`, `components/`). Shared UI pieces are in `components/ui.tsx`: `TabIntro` (title plus a "How to use this tab" guide that starts closed; every tab begins with one), `Notice` (error, warning, success, info), `Select` (styled native select), `Tooltip`, and `Spinner`. Icons come from `lucide-react`. The app icon source is `assets/icon.svg`, and the PNGs in `public/icon/` are rendered from it.
 - `entrypoints/*.content.ts`: content scripts with `registration: 'runtime'` and `matches: []`. They are injected with `browser.scripting.executeScript({ files: ['/content-scripts/<name>.js'] })`, and the value returned by `main()` is what `executeScript` returns.
-- `lib/llm/`: `FallbackChain` (provider order, `429` fallback, `completeJson` with Zod validation and one retry), the Gemini client, and the OpenAI-compatible client (Groq, OpenRouter, Ollama).
-- `lib/settings.ts`: provider config in `chrome.storage.local`, consent gate, `buildChain()`.
+- `lib/llm/`: `FallbackChain` (provider order; retries HTTP 5xx and network errors with backoff, then falls back; plain-language `AllProvidersFailedError`; `completeJson` with Zod validation and one retry), the Gemini client (handles Gemma models and models without text output), and the OpenAI-compatible client (Groq, OpenRouter, Ollama).
+- `lib/settings.ts`: provider config in `chrome.storage.local` (main plus optional backup model per provider), consent gate, `buildChain()`.
 - `lib/db.ts`: Dexie (`profile`, `jobs`, `documents`, `qa`). Add tables with a new `db.version(n)` and never edit old versions.
 - `lib/profile/`, `lib/parse/`: resume schema and PDF/DOCX/TXT reading and structuring.
 - `lib/extract/`: job description extraction pipeline (selection, adapters, JSON-LD, Readability, heuristic, `pickBest`).
@@ -54,7 +56,8 @@ CHROMIUM_PATH="$HOME/Library/Caches/ms-playwright/chromium-1234/chrome-mac-arm64
 - Vitest hides `console.log` from passing tests. To inspect values, throw an `Error` with the data.
 - E2E: mock LLMs with `context.route('https://generativelanguage.googleapis.com/**', ...)`. The side panel accepts `?tabId=` so tests can target another tab. The E2E build pre-grants `<all_urls>`; production asks at runtime.
 - E2E: always `await download.path()`, or closing the context hangs for about 30 seconds. Clipboard permissions can't be granted to extension origins; stub `navigator.clipboard` with `addInitScript`.
-- Free Gemini default model: `gemini-3.8-flash`.
+- Free Gemini default model: `gemini-3.8-flash`, with backup `gemini-3.5-flash-lite`.
+- E2E tests find elements by visible text. Keep `TabIntro` help text from repeating exact UI strings the tests look for (e.g. "Show original", "Changes saved.", "saved result", "with Gemini"), or the tests will fail.
 
 ## Working a phase plan
 

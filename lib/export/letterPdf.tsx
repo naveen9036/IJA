@@ -1,11 +1,12 @@
 import { Document, Page, pdf, StyleSheet, Text, View, type DocumentProps } from '@react-pdf/renderer';
 import type { ReactElement } from 'react';
 import { letterBlocks, type LetterRenderInput } from './letterLayout';
+import { PDF_COLORS } from './pdfTheme';
 
 const s = StyleSheet.create({
-  page: { padding: 54, fontFamily: 'Helvetica', fontSize: 11, lineHeight: 1.45, color: '#111' },
-  name: { fontFamily: 'Helvetica-Bold', fontSize: 16 },
-  contact: { fontSize: 9.5, color: '#444', marginBottom: 18 },
+  page: { padding: 54, fontFamily: 'Helvetica', fontSize: 11, lineHeight: 1.45, color: PDF_COLORS.text },
+  name: { fontFamily: 'Helvetica-Bold', fontSize: 18, lineHeight: 1.2, color: PDF_COLORS.accent },
+  contact: { fontSize: 9.5, color: PDF_COLORS.muted, marginBottom: 18, paddingBottom: 6, borderBottomWidth: 1, borderBottomColor: PDF_COLORS.accent },
   block: { marginBottom: 12 },
   recipient: { marginBottom: 12 },
 });

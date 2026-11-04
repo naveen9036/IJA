@@ -83,5 +83,5 @@ test('shows a clear error when no provider is configured', async ({ context, ext
   await page
     .locator('input[type=file]')
     .setInputFiles({ name: 'resume.txt', mimeType: 'text/plain', buffer: Buffer.from('Jane Doe. '.repeat(30)) });
-  await expect(page.getByText(/No LLM provider configured/)).toBeVisible();
+  await expect(page.getByText(/No AI provider is set up yet/)).toBeVisible();
 });

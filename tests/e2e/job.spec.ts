@@ -1,6 +1,33 @@
 import { expect, test } from './fixtures';
 import { ANALYSIS, fixture, mockGemini, openPanelFor } from './helpers';
 
+test('shows a scanning overlay on the page while analyzing, then removes it', async ({ context, extensionId }, info) => {
+  await context.route('https://careers.proseware.example/**', (r) =>
+    r.fulfill({ contentType: 'text/html', body: fixture('generic.html') }),
+  );
+  const prompts: string[] = [];
+  await context.route('https://generativelanguage.googleapis.com/**', async (route) => {
+    prompts.push(route.request().postData() ?? '');
+    await new Promise((r) => setTimeout(r, 1200));
+    await route.fulfill({ json: { candidates: [{ content: { parts: [{ text: JSON.stringify(ANALYSIS) }] } }] } });
+  });
+
+  const jobPage = await context.newPage();
+  await jobPage.goto('https://careers.proseware.example/jobs/ml');
+  const panel = await openPanelFor(context, extensionId, 'https://careers.proseware.example/*');
+  await panel.getByRole('button', { name: 'Analyze this page' }).click();
+
+  const overlay = jobPage.locator('#ija-scan-overlay');
+  await expect(overlay).toBeAttached();
+  await jobPage.screenshot({ path: info.outputPath('scanning.png') });
+  // The overlay must not block the page.
+  await jobPage.locator('h1').click();
+
+  await expect(panel.getByRole('heading', { name: 'Machine Learning Engineer' })).toBeVisible();
+  await expect(overlay).toHaveCount(0);
+  expect(prompts[0]).not.toContain('IJA');
+});
+
 test('analyzes a job page on an unknown site and caches the result', async ({ context, extensionId }) => {
   await context.route('https://careers.proseware.example/**', (r) =>
     r.fulfill({ contentType: 'text/html', body: fixture('generic.html') }),

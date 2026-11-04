@@ -3,6 +3,7 @@ import type { QaEntry } from './autofill/qa';
 import type { ExtractSource, JobHints } from './extract/types';
 import type { JobAnalysis } from './job/schema';
 import type { ApplicationInfo, ProfileData } from './profile/schema';
+import { normalizeProfileData } from './profile/schema';
 
 export interface ProfileRecord {
   id: 'me';
@@ -79,7 +80,13 @@ db.version(4).stores({
 });
 
 export async function getProfile(): Promise<ProfileRecord | undefined> {
-  return db.profile.get('me');
+  const r = await db.profile.get('me');
+  return r && { ...r, data: normalizeProfileData(r.data) };
+}
+
+export async function getResumeDocument(jobId: string): Promise<DocumentRecord<ProfileData> | undefined> {
+  const d = await getDocument<ProfileData>(jobId, 'resume');
+  return d && { ...d, content: normalizeProfileData(d.content) };
 }
 
 export async function saveProfile(

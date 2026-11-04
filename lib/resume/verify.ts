@@ -27,16 +27,26 @@ export function profileText(p: ProfileData): string {
     p.headline,
     p.summary,
     ...p.skills,
+    ...p.skillGroups.flatMap((g) => [g.name, ...g.skills]),
     ...p.certifications,
-    ...p.experience.flatMap((e) => [e.title, e.company, e.location, e.start, e.end, ...e.bullets]),
+    ...p.languages,
+    ...p.experience.flatMap((e) => [e.title, e.company, e.location, e.start, e.end, ...e.bullets, ...e.tech]),
     ...p.projects.flatMap((pr) => [pr.name, pr.description, ...pr.tech, ...pr.bullets]),
     ...p.education.flatMap((e) => [e.institution, e.degree, e.field, e.start, e.end, e.grade]),
   ].join('\n');
 }
 
+const allSkillItems = (p: ProfileData) => [
+  ...p.skills,
+  ...p.skillGroups.flatMap((g) => g.skills),
+  ...p.certifications,
+  ...p.projects.flatMap((pr) => pr.tech),
+  ...p.experience.flatMap((e) => e.tech),
+];
+
 export function profileSkills(p: ProfileData, text: string): Set<string> {
   const skills = findSkills(text, 'long');
-  for (const s of [...p.skills, ...p.certifications, ...p.projects.flatMap((pr) => pr.tech)]) {
+  for (const s of allSkillItems(p)) {
     findSkills(s, 'short').forEach((x) => skills.add(x));
   }
   return withImplied(skills);
@@ -102,6 +112,9 @@ export function verifyTailored(original: ProfileData, tailored: ProfileData, ext
   const years = totalYears(original.experience);
   const allowedNumbers = new Set([...numbersIn(origText), String(Math.floor(years)), String(Math.round(years))]);
 
+  const allOriginalSkills = allSkillItems(original);
+  const groups = tailored.skillGroups.length ? tailored.skillGroups : original.skillGroups;
+
   const resume = cleanProfileData({
     contact: original.contact,
     headline: original.headline,
@@ -109,8 +122,10 @@ export function verifyTailored(original: ProfileData, tailored: ProfileData, ext
     experience: matchRoles(original.experience, tailored.experience, removed),
     education: original.education,
     projects: matchProjects(original.projects, tailored.projects, removed),
-    skills: filterSkills(tailored.skills.length ? tailored.skills : original.skills, original.skills, known, removed),
+    skills: filterSkills(tailored.skills.length ? tailored.skills : original.skills, allOriginalSkills, known, removed),
+    skillGroups: groups.map((g) => ({ name: g.name, skills: filterSkills(g.skills, allOriginalSkills, known, removed) })),
     certifications: original.certifications,
+    languages: original.languages,
   });
 
   const check = (path: string, text: string) => {
@@ -131,5 +146,5 @@ export function verifyTailored(original: ProfileData, tailored: ProfileData, ext
     p.bullets.forEach((b, j) => check(`Project ${p.name}, bullet ${j + 1}`, b));
   });
 
-  return { resume, removed, warnings };
+  return { resume, removed: [...new Set(removed)], warnings };
 }

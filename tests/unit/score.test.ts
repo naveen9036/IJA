@@ -54,7 +54,7 @@ describe('experience', () => {
   });
 
   it('counts overlapping roles once', () => {
-    const e = (start: string, end: string) => ({ company: '', title: '', location: '', start, end, bullets: [] });
+    const e = (start: string, end: string) => ({ company: '', title: '', location: '', start, end, bullets: [], tech: [] });
     expect(totalYears([e('2020-01', '2021-12'), e('2021-01', '2022-12')], NOW)).toBe(3);
     expect(totalYears([e('2018-01', '2018-12'), e('2020-01', '2020-06')], NOW)).toBe(1.5);
     expect(totalYears([e('2015-01', '')], NOW)).toBe(1);

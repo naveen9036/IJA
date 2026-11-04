@@ -6,7 +6,8 @@ export default defineConfig({
   outDir: process.env.IJA_E2E ? '.output-e2e' : '.output',
   vite: () => ({ plugins: [tailwindcss()] }),
   manifest: {
-    name: 'IJA - Job Application Assistant',
+    name: 'IJA – Intelligent Job Assistant',
+    short_name: 'IJA',
     description: 'Match score, tailored resume, cover letter, and form autofill for any job page.',
     permissions: ['storage', 'activeTab', 'scripting'],
     host_permissions: [
@@ -21,6 +22,6 @@ export default defineConfig({
     optional_host_permissions: ['<all_urls>'],
     // react-pdf's layout engine (yoga) is WASM; MV3 allows 'wasm-unsafe-eval' but not 'unsafe-eval'.
     content_security_policy: { extension_pages: "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';" },
-    action: { default_title: 'Open IJA' },
+    action: { default_title: 'IJA – Intelligent Job Assistant' },
   },
 });

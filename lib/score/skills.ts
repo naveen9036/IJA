@@ -115,6 +115,23 @@ export const SKILLS: SkillEntry[] = [
   { name: 'Prometheus' },
   { name: 'Grafana' },
   { name: 'Microservices', aliases: ['microservice', 'micro services'] },
+  { name: 'Hibernate' },
+  { name: 'JPA', aliases: ['Java Persistence API'] },
+  { name: 'RabbitMQ' },
+  { name: 'IBM MQ', aliases: ['IBMMQ', 'WebSphere MQ'] },
+  { name: 'Gradle' },
+  { name: 'Maven' },
+  { name: 'Splunk' },
+  { name: 'Dynatrace' },
+  { name: 'Datadog' },
+  { name: 'CloudWatch', aliases: ['Amazon CloudWatch'] },
+  { name: 'JUnit' },
+  { name: 'Mockito' },
+  { name: 'Selenium' },
+  { name: 'Playwright' },
+  { name: 'Cypress' },
+  { name: 'Jest' },
+  { name: 'pytest' },
   // Practices and degrees
   { name: 'Agile', aliases: ['Scrum', 'Kanban'] },
   { name: 'Unit testing', aliases: ['unit tests', 'TDD', 'test driven development'] },
@@ -178,3 +195,35 @@ export function withImplied(skills: Set<string>): Set<string> {
 }
 
 export const isCategory = (name: string) => !!BY_NAME.get(name)?.impliedBy?.length;
+
+const GROUPS: [string, string[]][] = [
+  ['Languages', ['Python', 'Java', 'JavaScript', 'TypeScript', 'Go', 'Rust', 'C++', 'C#', 'C', 'Ruby', 'PHP', 'Kotlin', 'Swift', 'Scala', 'R', 'Bash', 'SQL']],
+  [
+    'Frameworks',
+    ['React', 'Angular', 'Vue', 'Svelte', 'Next.js', 'Node.js', 'Express', 'Django', 'Flask', 'FastAPI', 'Spring', '.NET', 'Rails', 'SwiftUI', 'Combine', 'Flutter', 'React Native', 'GraphQL', 'REST', 'gRPC', 'Microservices', 'Hibernate', 'JPA'],
+  ],
+  [
+    'Data & Messaging',
+    ['PostgreSQL', 'MySQL', 'SQL Server', 'Oracle Database', 'SQLite', 'MongoDB', 'Cassandra', 'DynamoDB', 'Redis', 'Elasticsearch', 'Cosmos DB', 'Snowflake', 'BigQuery', 'Redshift', 'Databricks', 'Spark', 'Kafka', 'RabbitMQ', 'IBM MQ', 'Airflow', 'dbt', 'ETL', 'Pandas', 'NumPy'],
+  ],
+  ['AI & ML', ['PyTorch', 'TensorFlow', 'Keras', 'scikit-learn', 'Machine learning', 'Deep learning', 'NLP', 'Computer vision', 'LLM', 'Generative AI']],
+  [
+    'Cloud & DevOps',
+    ['AWS', 'Azure', 'GCP', 'Docker', 'Kubernetes', 'Terraform', 'Ansible', 'Helm', 'Jenkins', 'GitHub Actions', 'GitLab CI', 'Azure DevOps', 'Argo CD', 'CI/CD', 'Linux', 'Git', 'Gradle', 'Maven', 'Prometheus', 'Grafana', 'Splunk', 'Dynatrace', 'Datadog', 'CloudWatch'],
+  ],
+  ['Testing', ['JUnit', 'Mockito', 'Selenium', 'Playwright', 'Cypress', 'Jest', 'pytest', 'Unit testing']],
+  ['Analytics', ['Tableau', 'Power BI', 'Looker', 'Excel']],
+  ['Practices', ['Agile']],
+];
+
+export const SKILL_GROUP_ORDER = [...GROUPS.map(([g]) => g), 'Other'];
+const GROUP_OF = new Map(GROUPS.flatMap(([g, names]) => names.map((n) => [n, g] as const)));
+
+/** Category for a resume skill item, e.g. "Spring Boot" -> "Frameworks"; "Other" when unknown. */
+export function skillGroupOf(item: string): string {
+  for (const name of findSkills(item, 'short')) {
+    const g = GROUP_OF.get(name);
+    if (g) return g;
+  }
+  return 'Other';
+}

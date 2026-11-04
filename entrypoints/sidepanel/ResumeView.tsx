@@ -1,9 +1,10 @@
+import { Download, FileArchive, FileText, Save, Sparkles, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import {
   db,
   documentId,
-  getDocument,
   getProfile,
+  getResumeDocument,
   saveDocument,
   type DocumentRecord,
   type JobRecord,
@@ -17,11 +18,36 @@ import { verifyTailored } from '@/lib/resume/verify';
 import { scoreMatch } from '@/lib/score/score';
 import { buildChain, loadSettings } from '@/lib/settings';
 import ProfileEditor from './components/ProfileEditor';
+import { Notice, Spinner, TabIntro } from './components/ui';
 import { WarningsBox } from './components/WarningsBox';
 
 type ResumeRecord = DocumentRecord<ProfileData>;
 
 const norm = (s: string) => s.trim().toLowerCase();
+
+const intro = (
+  <TabIntro
+    id="resume"
+    icon={FileText}
+    title="Tailored resume"
+    summary="Rewrite your resume for the analyzed job, using only facts from your profile."
+    steps={[
+      'Analyze a job in the Job tab, and make sure your resume is saved in Profile.',
+      <>
+        Click <b>Generate tailored resume</b>. The AI rewrites your summary and bullet points around this job's
+        requirements.
+      </>,
+      'Read the amber review box. Anything the AI invented – a skill, a role, a number – is removed or flagged so you can fix it.',
+      'Edit any section below. Open a role to compare the new bullets with the ones from your profile.',
+      'Save your edits, then download Word (DOCX), PDF, or both as a zip.',
+    ]}
+    tips={[
+      'Contact details, education, employers, job titles and dates always come from your profile – the AI cannot change them.',
+      'The files use a single-column layout without tables or images, which applicant tracking systems read reliably.',
+      'One tailored resume is kept per job. Regenerating replaces it, so download first if you want to keep a version.',
+    ]}
+  />
+);
 
 export default function ResumeView({
   jobId,
@@ -48,7 +74,7 @@ export default function ResumeView({
       const [j, p, d] = await Promise.all([
         jobId ? db.jobs.get(jobId) : undefined,
         getProfile(),
-        jobId ? getDocument<ProfileData>(jobId, 'resume') : undefined,
+        jobId ? getResumeDocument(jobId) : undefined,
       ]);
       setJob(j ?? null);
       setProfile(p ?? null);
@@ -59,26 +85,32 @@ export default function ResumeView({
     return () => abortRef.current?.abort();
   }, [jobId]);
 
-  if (!loaded) return <p className="text-sm text-gray-500">Loading…</p>;
+  if (!loaded) return intro;
 
   if (!job || !job.analysis.isJobPosting) {
     return (
-      <section className="card text-sm">
-        Analyze a job posting first.{' '}
-        <button className="text-blue-700 underline" onClick={onOpenJob}>
-          Go to Job
-        </button>
-      </section>
+      <>
+        {intro}
+        <Notice tone="info">
+          Analyze a job posting first.{' '}
+          <button className="font-medium underline" onClick={onOpenJob}>
+            Go to Job
+          </button>
+        </Notice>
+      </>
     );
   }
   if (!profile) {
     return (
-      <section className="card text-sm">
-        Add your resume first.{' '}
-        <button className="text-blue-700 underline" onClick={onOpenProfile}>
-          Go to Profile
-        </button>
-      </section>
+      <>
+        {intro}
+        <Notice tone="info">
+          Add your resume first.{' '}
+          <button className="font-medium underline" onClick={onOpenProfile}>
+            Go to Profile
+          </button>
+        </Notice>
+      </>
     );
   }
 
@@ -177,27 +209,27 @@ export default function ResumeView({
 
   return (
     <div className="space-y-3">
-      <section className="card space-y-2">
-        <h2 className="text-sm font-semibold">
-          Tailored resume for {role}
+      {intro}
+      <section className="card space-y-3">
+        <h3 className="text-sm font-semibold text-slate-900">
+          For {role}
           {company && ` at ${company}`}
-        </h2>
-        <p className="text-xs text-gray-500">
-          Rewrites your summary and bullets for this job using only facts from your profile. Review it before you use it.
-        </p>
+        </h3>
         <div className="flex gap-2">
           <button className="btn-primary flex-1" disabled={!!busy} onClick={generate}>
+            {busy ? <Spinner /> : <Sparkles className="h-4 w-4" aria-hidden />}
             {doc ? 'Regenerate' : 'Generate tailored resume'}
           </button>
           {busy && abortRef.current && (
             <button className="btn-secondary" onClick={() => abortRef.current?.abort()}>
+              <X className="h-4 w-4" aria-hidden />
               Cancel
             </button>
           )}
         </div>
-        {busy && <p className="text-sm text-blue-700">{busy}</p>}
-        {error && <p className="text-sm whitespace-pre-wrap text-red-700">{error}</p>}
-        {notice && <p className="text-sm text-green-700">{notice}</p>}
+        {busy && <p className="text-sm text-indigo-700">{busy}</p>}
+        {error && <Notice tone="error">{error}</Notice>}
+        {notice && <Notice tone="success">{notice}</Notice>}
         {doc && doc.profileVersion !== profile.version && (
           <p className="text-xs text-amber-700">Your profile changed after this was generated. Regenerate to include it.</p>
         )}
@@ -240,18 +272,22 @@ export default function ResumeView({
             }}
           />
 
-          <div className="sticky bottom-0 space-y-2 border-t border-gray-200 bg-gray-50 py-2">
+          <div className="sticky bottom-0 -mx-3 space-y-2 border-t border-slate-200 bg-white/95 px-3 py-3 backdrop-blur">
             <button className="btn-secondary w-full" disabled={!dirty || !!busy} onClick={save}>
+              <Save className="h-4 w-4" aria-hidden />
               {dirty ? 'Save changes' : 'All changes saved'}
             </button>
             <div className="grid grid-cols-3 gap-2">
-              <button className="btn-primary" disabled={!!busy} onClick={() => download('docx')}>
+              <button className="btn-primary px-2" disabled={!!busy} onClick={() => download('docx')}>
+                <Download className="h-4 w-4" aria-hidden />
                 Download DOCX
               </button>
-              <button className="btn-primary" disabled={!!busy} onClick={() => download('pdf')}>
+              <button className="btn-primary px-2" disabled={!!busy} onClick={() => download('pdf')}>
+                <Download className="h-4 w-4" aria-hidden />
                 Download PDF
               </button>
-              <button className="btn-secondary" disabled={!!busy} onClick={() => download('zip')}>
+              <button className="btn-secondary px-2" disabled={!!busy} onClick={() => download('zip')}>
+                <FileArchive className="h-4 w-4" aria-hidden />
                 Both (.zip)
               </button>
             </div>

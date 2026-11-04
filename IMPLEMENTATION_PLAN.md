@@ -1,4 +1,13 @@
-# Job Application Assistant: Chrome Extension Implementation Plan
+# IJA – Intelligent Job Assistant: Implementation Plan
+
+IJA is a Chrome extension (Manifest V3, side panel) for job seekers. You upload your resume once. Then, on any job page, IJA:
+
+1. Reads the job description and scores how well you match it.
+2. Writes a resume tailored to that job (DOCX + PDF).
+3. Writes a cover letter (DOCX + PDF).
+4. Fills in the application form with one click. It never submits the form.
+
+Everything runs free, using free-tier or local AI, and your data stays in your browser.
 
 ## Decisions
 

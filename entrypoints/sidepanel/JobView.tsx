@@ -1,8 +1,10 @@
+import { BriefcaseBusiness, RefreshCw, ScanSearch, X } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { db, getProfile, type JobRecord, type ProfileRecord } from '@/lib/db';
 import { analyzeTab, getTargetTabId, requestSiteAccess } from '@/lib/job/capture';
 import { scoreMatch } from '@/lib/score/score';
 import { MatchCard, RequirementList } from './components/MatchCard';
+import { Notice, Spinner, TabIntro } from './components/ui';
 
 const SOURCE_LABEL: Record<JobRecord['source'], string> = {
   selection: 'your highlighted text',
@@ -87,40 +89,59 @@ export default function JobView({
 
   return (
     <div className="space-y-3">
+      <TabIntro
+        id="job"
+        icon={BriefcaseBusiness}
+        title="Analyze a job"
+        summary="Read the job posting in your current browser tab and see how well it fits your profile."
+        steps={[
+          'Open a job posting in this browser window – LinkedIn, Indeed, Greenhouse, Lever, Workday or any company careers page.',
+          'Optional: if the page is cluttered, select the job description with your mouse first. IJA will use exactly that text.',
+          <>
+            Click <b>Analyze this page</b>. The first time, Chrome asks to let IJA read websites – choose <b>Allow</b>.
+          </>,
+          'Check the score, the requirements you meet (✓) or miss (✗), and the technologies not found in your profile.',
+          'Then use the Resume, Letter and Apply tabs for this same job.',
+        ]}
+        tips={[
+          'The score is calculated on your device from your profile: required skills 40%, technology overlap 25%, experience 20%, role fit 10%, location 5%.',
+          'Each job is stored after the first analysis, so opening the same unchanged page again costs no AI request. Use Re-analyze to force a fresh read.',
+          'Missing a skill you actually have? Add it in Profile and the score updates.',
+        ]}
+      />
+
       <section className="card space-y-2">
-        <p className="text-sm text-gray-600">
-          Open a job posting on any site, then click Analyze. To pick the text yourself, highlight the job description
-          first.
-        </p>
         <div className="flex gap-2">
           <button className="btn-primary flex-1" disabled={busy} onClick={() => analyze(false)}>
+            {busy ? <Spinner /> : <ScanSearch className="h-4 w-4" aria-hidden />}
             {busy ? 'Analyzing…' : 'Analyze this page'}
           </button>
           {busy && (
             <button className="btn-secondary" onClick={() => abortRef.current?.abort()}>
+              <X className="h-4 w-4" aria-hidden />
               Cancel
             </button>
           )}
         </div>
-        {error && <p className="text-sm whitespace-pre-wrap text-red-700">{error}</p>}
+        {error && <Notice tone="error">{error}</Notice>}
       </section>
 
       {job && a && !a.isJobPosting && (
-        <section className="card border-amber-300 bg-amber-50 text-sm">
+        <Notice tone="warning">
           This page doesn't look like a single job posting. Open the job's own page, or highlight the job description
           and click Analyze again.
-        </section>
+        </Notice>
       )}
 
       {job && a?.isJobPosting && match && <MatchCard match={match} />}
 
       {job && a?.isJobPosting && !profile && (
-        <section className="card border-blue-200 bg-blue-50 text-sm">
+        <Notice tone="info">
           Add your resume to see how well you match this job.{' '}
-          <button className="text-blue-700 underline" onClick={onOpenProfile}>
+          <button className="font-medium underline" onClick={onOpenProfile}>
             Go to Profile
           </button>
-        </section>
+        </Notice>
       )}
 
       {job && a?.isJobPosting && (
@@ -183,6 +204,7 @@ export default function JobView({
             <pre className="mt-1 max-h-64 overflow-auto text-xs whitespace-pre-wrap text-gray-700">{job.text}</pre>
           </details>
           <button className="btn-secondary" disabled={busy} onClick={() => analyze(true)}>
+            <RefreshCw className="h-4 w-4" aria-hidden />
             Re-analyze
           </button>
         </section>

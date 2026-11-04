@@ -1,4 +1,5 @@
-import { AlignmentType, Document, Packer, Paragraph, TextRun } from 'docx';
+import { AlignmentType, BorderStyle, Document, Packer, Paragraph, TextRun } from 'docx';
+import { THEME } from './layout';
 import { letterBlocks, type LetterRenderInput } from './letterLayout';
 
 export async function buildLetterDocx(input: LetterRenderInput): Promise<Blob> {
@@ -6,8 +7,12 @@ export async function buildLetterDocx(input: LetterRenderInput): Promise<Blob> {
   const para = (text: string, after = 200) => new Paragraph({ text, spacing: { after } });
 
   const children = [
-    new Paragraph({ children: [new TextRun({ text: b.name, bold: true, size: 32 })], alignment: AlignmentType.LEFT }),
-    new Paragraph({ children: [new TextRun({ text: b.contact, size: 19, color: '444444' })], spacing: { after: 300 } }),
+    new Paragraph({ children: [new TextRun({ text: b.name, bold: true, size: 36, color: THEME.accent })], alignment: AlignmentType.LEFT }),
+    new Paragraph({
+      children: [new TextRun({ text: b.contact, size: 19, color: THEME.muted })],
+      border: { bottom: { style: BorderStyle.SINGLE, size: 8, color: THEME.accent, space: 4 } },
+      spacing: { after: 300 },
+    }),
     para(b.date, 300),
     ...b.recipient.map((r, i) => para(r, i === b.recipient.length - 1 ? 300 : 0)),
     para(b.salutation),

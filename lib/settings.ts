@@ -11,6 +11,8 @@ export interface ProviderConfig {
   enabled: boolean;
   apiKey: string;
   model: string;
+  /** Same provider, second model; used when the main model is busy or over its limit. */
+  backupModel: string;
 }
 
 export interface Settings {
@@ -22,10 +24,11 @@ export interface Settings {
 
 export const PROVIDER_META: Record<
   ProviderId,
-  { label: string; baseUrl: string; needsKey: boolean; cloud: boolean; keyUrl: string; note: string }
+  { label: string; short: string; baseUrl: string; needsKey: boolean; cloud: boolean; keyUrl: string; note: string }
 > = {
   gemini: {
     label: 'Google Gemini (free tier)',
+    short: 'Gemini',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
     needsKey: true,
     cloud: true,
@@ -34,6 +37,7 @@ export const PROVIDER_META: Record<
   },
   groq: {
     label: 'Groq (free tier)',
+    short: 'Groq',
     baseUrl: 'https://api.groq.com/openai/v1',
     needsKey: true,
     cloud: true,
@@ -42,6 +46,7 @@ export const PROVIDER_META: Record<
   },
   openrouter: {
     label: 'OpenRouter (free models)',
+    short: 'OpenRouter',
     baseUrl: 'https://openrouter.ai/api/v1',
     needsKey: true,
     cloud: true,
@@ -50,6 +55,7 @@ export const PROVIDER_META: Record<
   },
   ollama: {
     label: 'Ollama (local, private)',
+    short: 'Ollama',
     baseUrl: 'http://localhost:11434/v1',
     needsKey: false,
     cloud: false,
@@ -60,10 +66,10 @@ export const PROVIDER_META: Record<
 
 export const defaultSettings = (): Settings => ({
   providers: [
-    { id: 'gemini', enabled: true, apiKey: '', model: 'gemini-3.8-flash' },
-    { id: 'groq', enabled: false, apiKey: '', model: '' },
-    { id: 'openrouter', enabled: false, apiKey: '', model: '' },
-    { id: 'ollama', enabled: false, apiKey: '', model: '' },
+    { id: 'gemini', enabled: true, apiKey: '', model: 'gemini-3.8-flash', backupModel: 'gemini-3.5-flash-lite' },
+    { id: 'groq', enabled: false, apiKey: '', model: 'openai/gpt-oss-120b', backupModel: 'qwen/qwen3.8-27b' },
+    { id: 'openrouter', enabled: false, apiKey: '', model: '', backupModel: '' },
+    { id: 'ollama', enabled: false, apiKey: '', model: '', backupModel: '' },
   ],
   cloudConsent: false,
 });
@@ -89,15 +95,25 @@ export function isUsable(p: ProviderConfig, cloudConsent: boolean): boolean {
   return p.enabled && !!p.model.trim() && (!meta.needsKey || !!p.apiKey.trim()) && (!meta.cloud || cloudConsent);
 }
 
-export function createProvider(p: ProviderConfig): LlmProvider {
+export function createProvider(p: ProviderConfig, model = p.model, name = PROVIDER_META[p.id].short): LlmProvider {
   const meta = PROVIDER_META[p.id];
   return p.id === 'gemini'
-    ? new GeminiProvider(p.apiKey.trim(), p.model.trim())
-    : new OpenAICompatProvider(meta.label, meta.baseUrl, p.apiKey.trim(), p.model.trim());
+    ? new GeminiProvider(p.apiKey.trim(), model.trim(), name)
+    : new OpenAICompatProvider(name, meta.baseUrl, p.apiKey.trim(), model.trim());
 }
 
 export function buildChain(settings: Settings): FallbackChain {
-  return new FallbackChain(settings.providers.filter((p) => isUsable(p, settings.cloudConsent)).map(createProvider));
+  return new FallbackChain(
+    settings.providers
+      .filter((p) => isUsable(p, settings.cloudConsent))
+      .flatMap((p) => {
+        const backup = p.backupModel?.trim();
+        const main = createProvider(p);
+        return backup && backup !== p.model.trim()
+          ? [main, createProvider(p, backup, `${PROVIDER_META[p.id].short} (${backup})`)]
+          : [main];
+      }),
+  );
 }
 
 export function listModels(p: ProviderConfig): Promise<string[]> {

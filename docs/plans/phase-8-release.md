@@ -1,4 +1,4 @@
-# Phase 8: Release (Chrome Web Store)
+# Phase 8: Release of IJA – Intelligent Job Assistant (Chrome Web Store)
 
 **Goal:** Ship a store-ready build with a clear privacy story and the minimum permissions.
 
@@ -6,8 +6,9 @@
 
 ## Steps
 
-- [ ] **1. Icons:** `public/icon/16.png`, `32.png`, `48.png`, `128.png` (WXT picks them up automatically). Add a toolbar icon and 1280×800 store screenshots of the Job, Resume, and Apply tabs, using made-up profile data.
+- [ ] **1. Icons:** Already done: `public/icon/16|32|48|128.png`, rendered from `assets/icon.svg`. Still to do: 1280×800 store screenshots of the Job, Resume, and Apply tabs, using made-up profile data.
 - [ ] **2. Manifest review**
+  - Already done: the rename in `wxt.config.ts` (`name: 'IJA – Intelligent Job Assistant'`, `short_name: 'IJA'`, matching `action.default_title`) and in `package.json`. Check the description is 132 characters or less.
   - Check the built `manifest.json`.
   - Permissions are exactly `storage`, `activeTab`, `scripting`, `sidePanel`; host permissions are only the AI provider endpoints; `optional_host_permissions: ['<all_urls>']`.
   - No `<all_urls>` in `host_permissions` (that is E2E builds only).
@@ -19,6 +20,7 @@
   - No analytics, no own servers, no data sale.
   - "Delete all data" removes everything.
 - [ ] **4. Store listing text**
+  - Listing name: **IJA – Intelligent Job Assistant**. Before submitting, search the Web Store for "IJA" to make sure no other extension uses the name.
   - Short description (132 characters or less) and full description.
   - A justification for each permission:
     - `activeTab`/`scripting`: read the job page and fill forms when the user clicks

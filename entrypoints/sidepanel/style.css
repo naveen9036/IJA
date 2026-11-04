@@ -1,20 +1,84 @@
 @import 'tailwindcss';
 
+@theme {
+  --animate-fade-in: fade-in 0.22s ease-out;
+  --animate-pop: pop 0.18s ease-out;
+  --animate-morph: morph 6s ease-in-out infinite;
+  --animate-spin-slow: spin-slow 8s linear infinite;
+  --animate-glow-pulse: glow-pulse 2.5s ease-in-out infinite;
+  --animate-shimmer: shimmer 1.8s ease-in-out infinite;
+  --animate-pulse-dot: pulse-dot 1.4s ease-in-out infinite;
+
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(4px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes pop {
+    from {
+      transform: scale(0.85);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+  @keyframes morph {
+    0%, 100% { border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%; }
+    25%       { border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%; }
+    50%       { border-radius: 50% 60% 30% 40% / 40% 50% 60% 50%; }
+    75%       { border-radius: 40% 30% 60% 70% / 60% 40% 30% 50%; }
+  }
+  @keyframes spin-slow {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes glow-pulse {
+    0%, 100% { box-shadow: 0 0 18px 4px rgba(129,140,248,0.35); }
+    50%       { box-shadow: 0 0 36px 12px rgba(167,139,250,0.55); }
+  }
+  @keyframes shimmer {
+    0%   { transform: translateX(-100%); }
+    100% { transform: translateX(250%); }
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 0.3; transform: scale(0.8); }
+    50%       { opacity: 1;   transform: scale(1.2); }
+  }
+}
+
+@layer base {
+  /* Everything is sized in rem, so the whole panel scales with its width: 15px when narrow, up to 20px when wide. */
+  html {
+    font-size: clamp(15px, calc(10px + 1.6vw), 20px);
+  }
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased;
+    font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+}
+
 @utility input {
-  @apply w-full rounded border border-gray-300 bg-white px-2 py-1 text-sm focus:border-blue-500 focus:outline-none;
+  @apply w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm shadow-sm transition outline-none placeholder:text-slate-400 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100;
+}
+@utility select {
+  @apply input cursor-pointer appearance-none pr-9;
 }
 @utility btn {
-  @apply rounded px-3 py-1.5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100;
 }
 @utility btn-primary {
-  @apply btn bg-blue-600 text-white hover:bg-blue-700;
+  @apply btn bg-indigo-600 text-white shadow-sm hover:bg-indigo-700;
 }
 @utility btn-secondary {
-  @apply btn border border-gray-300 bg-white text-gray-800 hover:bg-gray-50;
+  @apply btn border border-slate-300 bg-white text-slate-700 shadow-sm hover:border-slate-400 hover:bg-slate-50;
 }
 @utility btn-danger {
-  @apply btn border border-red-300 bg-white text-red-700 hover:bg-red-50;
+  @apply btn border border-red-200 bg-white text-red-700 hover:bg-red-50;
 }
 @utility card {
-  @apply rounded-lg border border-gray-200 bg-white p-3;
+  @apply rounded-xl border border-slate-200 bg-white p-4 shadow-sm;
 }
