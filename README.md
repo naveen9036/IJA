@@ -1,6 +1,22 @@
 # IJA – Intelligent Job Assistant
 
-**IJA** is a Chrome (Manifest V3) side-panel extension for job seekers. Upload your resume once, then on any job page IJA:
+<p align="center">
+  <b>A free, local-first Chrome extension that scores job fit, writes tailored resumes and cover letters, and autofills application forms.</b>
+</p>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Chrome-MV3-4285F4?style=for-the-badge&logo=google-chrome&logoColor=white" alt="Chrome MV3" />
+  <img src="https://img.shields.io/badge/React-19-61DAFB?style=for-the-badge&logo=react&logoColor=black" alt="React 19" />
+  <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript" />
+  <img src="https://img.shields.io/badge/Vitest-7E328B?style=for-the-badge&logo=vitest&logoColor=white" alt="Vitest" />
+  <img src="https://img.shields.io/badge/Playwright-E71D37?style=for-the-badge&logo=playwright&logoColor=white" alt="Playwright" />
+</p>
+
+---
+
+## What is IJA?
+
+**IJA – Intelligent Job Assistant** is a Chrome (Manifest V3) side-panel extension for job seekers. Upload your resume once, then on any job page IJA:
 
 1. **Scores** how well you match the job.
 2. **Writes** a tailored resume (DOCX + PDF).
@@ -11,32 +27,83 @@ Everything runs free (free-tier cloud LLMs or local models), and your data stays
 
 ## Status
 
+All code lives on `main`. The `feature/ija-complete-implementation` branch contains the same implementation history.
+
 | Branch | Contents |
 |--------|----------|
-| `feature/ija-complete-implementation` | Full implementation: job match scoring, tailored resume & cover letter, form autofill, unit + E2E tests, build config. |
-| `main` | Intentionally empty — all code lives on the feature branch above. |
+| `main` | Full implementation: job match scoring, tailored resume & cover letter, form autofill, unit + E2E tests, build config, and documentation. |
+| `feature/ija-complete-implementation` | Same implementation as `main` (development branch). |
 
-## Quick start
+## Prerequisites
+
+- **Node.js** ≥ 18 (recommended ≥ 20)
+- **npm** (comes with Node)
+- **Google Chrome** (to load the unpacked extension)
+- An API key for at least one LLM provider (Gemini, Groq, or OpenRouter), or **Ollama** running locally for a fully private setup.
+
+## Installation
+
+### 1. Clone the repository
 
 ```bash
-# Install dependencies
+git clone https://github.com/naveen9036/IJA.git
+cd IJA
+```
+
+### 2. Install dependencies
+
+```bash
 npm install
+```
 
-# Type check
+### 3. Verify the code compiles
+
+```bash
 npm run compile
+```
 
-# Run unit tests
-npm test
+### 4. Build the extension
 
-# Build the extension (output -> .output/chrome-mv3)
+```bash
 npm run build
 ```
 
-Load the extension:
+This outputs the extension to `.output/chrome-mv3`.
+
+### 5. Load into Chrome
+
 1. Open Chrome and go to `chrome://extensions`.
-2. Enable **Developer mode** (top right).
+2. Enable **Developer mode** (toggle at top right).
 3. Click **Load unpacked** and select the `.output/chrome-mv3` folder.
-4. Pin the IJA icon to your toolbar. Clicking it opens the side panel.
+4. Pin the IJA icon to your toolbar — clicking it opens the side panel.
+
+
+## How it works
+
+```
+┌─────────────┐      ┌──────────────────┐      ┌─────────────┐
+│  Job page   │◄────►│ Content script   │◄─────┤ Background  │
+│  (any site) │ inject │ extract/autofill│     │ service worker│
+└─────────────┘      └──────────────────┘      └──────┬──────┘
+                                                       │ chrome.scripting
+                                                       ▼
+                                              ┌──────────────────┐
+                                              │ Side panel (UI)  │
+                                              │ React + IndexedDB│
+                                              └────────┬────────┘
+                                                       │ LLM calls only here
+                                                       ▼
+                                              ┌──────────────────┐
+                                              │ Free LLM (Gemini │
+                                              │ /Groq/Ollama…)   │
+                                              └──────────────────┘
+```
+
+1. **Profile** — upload your résumé (PDF/DOCX/TXT); it's parsed and stored locally.
+2. **Job** — open a job page, click the IJA icon, then **Analyze**. IJA extracts the job description and scores the match.
+3. **Résumé / Letter** — generate tailored documents, review the fabrication checks, then download DOCX or PDF.
+4. **Apply** — autofill the form on the current page; review every field before it's filled.
+5. **Settings** — pick your LLM provider, add API keys, and consent to cloud calls.
 
 ## How to use
 
@@ -49,12 +116,16 @@ Load the extension:
 
 ## Features
 
-- **Any job page:** generic extraction pipeline (JSON-LD, Readability, heuristics) plus LinkedIn/Greenhouse/Lever adapters.
-- **Deterministic scoring:** skill, keyword, experience, title, and logistics components — no LLM call required for scoring.
-- **No invented facts:** generated resumes and letters are checked against your profile; you review before downloading.
-- **Safe autofill:** never auto-submits, never fills sensitive EEO fields unless you saved an answer; file attachments (resume/cover letter) supported.
-- **Local-first:** profile, jobs, and documents live in IndexedDB. One-click "Delete all data" in Settings.
-- **Free LLM strategy:** Gemini (default, free tier) with automatic fallback to Groq → OpenRouter → Ollama on rate limits or failures.
+## Features
+
+- **Works on any job page** — generic extraction pipeline (JSON-LD, Readability, heuristics) plus dedicated LinkedIn, Greenhouse, and Lever adapters.
+- **Deterministic match scoring** — skills (40%), keywords (25%), experience (20%), title (10%), logistics (5%). No LLM call needed for scoring, so it's instant and repeatable.
+- **No invented facts** — generated resumes and cover letters are verified against your profile; you review diff/warnings before downloading.
+- **Safe autofill** — never auto-submits forms, never clicks page buttons, and skips sensitive EEO fields (gender, race, veteran, disability) unless you saved an answer.
+- **File attachments** — autofill can attach your generated résumé or cover letter PDF to file inputs.
+- **Local-first** — profile, jobs, documents, and saved answers live in IndexedDB. One-click **"Delete all data"** in Settings.
+- **Free LLM strategy** — Google Gemini (default, free tier) with automatic fallback to Groq → OpenRouter → Ollama on rate limits or failures.
+- **Privacy by design** — API keys live in `chrome.storage.local` and are used only inside extension pages. They never reach web pages or content scripts.
 
 ## Tech stack
 
@@ -98,17 +169,59 @@ IJA/
   package.json
 ```
 
-## LLM providers & privacy
+## LLM providers & API keys
 
 Default provider is **Google Gemini free tier** (`gemini-3.8-flash`). Before the first cloud call you must accept consent: free-tier prompts may be used by the provider to improve their models.
 
-Available providers:
-- **Gemini** (cloud, free tier) — `generativelanguage.googleapis.com`
-- **Groq** (cloud, free tier) — OpenAI-compatible
-- **OpenRouter** (cloud, free `:free` models)
-- **Ollama** (local, private) — `http://localhost:11434` (start with `OLLAMA_ORIGINS=chrome-extension://*`)
+| Provider | Type | Endpoint | Default model | Notes |
+|----------|------|----------|---------------|-------|
+| **Gemini** | Cloud (free tier) | `generativelanguage.googleapis.com` | `gemini-3.8-flash` | Default; requires consent |
+| **Groq** | Cloud (free tier) | `api.groq.com` | `openai/gpt-oss-120b` | Fast; OpenAI-compatible |
+| **OpenRouter** | Cloud (free models) | `openrouter.ai` | `:free` models | Pick models ending in `:free` |
+| **Ollama** | Local (private) | `http://localhost:11434` | any local model | Start with `OLLAMA_ORIGINS=chrome-extension://*` |
 
-API keys are stored in `chrome.storage.local` and only used inside extension pages (side panel). They are never sent to web pages or content scripts.
+- API keys are stored in `chrome.storage.local` and used only inside the side panel.
+- They are **never** sent to web pages or content scripts.
+- Automatic fallback chains to the next provider on rate limits (`429`) or failures.
+
+## Privacy & security
+
+- **Local-first**: your profile, jobs, documents, and answers live in IndexedDB in your browser. Nothing is sent to a backend.
+- **No remote code**: all assets (fonts, WASM, workers) are bundled locally.
+- **CSP**: `script-src 'self' 'wasm-unsafe-eval'` (needed by react-pdf); no `'unsafe-eval'`.
+- **Minimal permissions**: `storage`, `activeTab`, `scripting`, plus optional `<all_urls>` site access requested on first Analyze click.
+- **Delete all data**: one button in Settings wipes IndexedDB completely.
+
+## Testing
+
+```bash
+# Unit tests (Vitest)
+npm test
+
+# Type check
+npm run compile
+
+# End-to-end tests (Playwright; needs Chrome for Testing)
+npm run test:e2e
+```
+
+Unit tests live in `tests/unit/`; E2E tests live in `tests/e2e/` with shared fixtures in `tests/fixtures/`.
+
+## Roadmap (phases)
+
+| Phase | Scope | Status |
+|-------|-------|--------|
+| 0 | Setup: WXT scaffold, side panel, Settings, Dexie DB, Gemini + OpenAI-compatible clients | ✅ Done |
+| 1 | Profile: upload, parse, structured extraction, editable form | ✅ Done |
+| 2 | JD extraction: generic pipeline + LinkedIn/Greenhouse/Lever adapters | ✅ Done |
+| 3 | Scoring: skill normalization, weighted score, UI | ✅ Done |
+| 4 | Tailored résumé: generation, fabrication check, diff view, DOCX + PDF | ✅ Done |
+| 5 | Cover letter: generation, editing, DOCX + PDF | ✅ Done |
+| 6 | Autofill: detect, map, fill, file attach, iframes, QA memory | ✅ Done |
+| 7 | Hardening: Workday adapter, rate-limit handling, error states, E2E | ✅ Done |
+| 8 | Release: privacy policy, Chrome Web Store listing, limited-use disclosure | 📋 Planned |
+
+See `docs/plans/` for step-by-step phase plans and `IMPLEMENTATION_PLAN.md` for the full product plan.
 
 ## Scripts
 
@@ -125,10 +238,37 @@ API keys are stored in `chrome.storage.local` and only used inside extension pag
 
 See [CONTRIBUTING.md](./CONTRIBUTING.md).
 
+Quick summary:
+- Use the product name **"IJA – Intelligent Job Assistant"** everywhere.
+- LLM calls run only in the side panel — never in content scripts or the service worker.
+- Never auto-submit forms or click page buttons.
+- Every LLM output is validated with a Zod schema.
+- Keep comments minimal; only where the code can't explain itself.
+
+## Deployment
+
+See [docs/deployment.md](./docs/deployment.md) for the full Chrome Web Store publishing checklist.
+
+Quick build:
+
+```bash
+npm run compile && npm test && npm run build && npm run zip
+```
+
+Upload the resulting `.zip` to the [Chrome Web Store Developer Dashboard](https://chromewebstore.google.com/devconsole/).
+
 ## License
 
 Private project — all rights reserved.
 
+## Support
+
+- Issues & feature requests: open a GitHub issue in this repository.
+- Documentation: see `docs/` for architecture, API reference, and deployment guides.
+
 ---
 
-For the technical design, see [docs/architecture.md](./docs/architecture.md). For publishing to the Chrome Web Store, see [docs/deployment.md](./docs/deployment.md).
+<p align="center">
+  Built with ❤️ for job seekers. <br>
+  <b>IJA – Intelligent Job Assistant</b>
+</p>
